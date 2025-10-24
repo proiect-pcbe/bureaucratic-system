@@ -1,46 +1,88 @@
 package org.example;
 
-import org.example.config.ConfigLoader;   // folosește clasa ta existentă
-import org.example.model.Client;
-import org.example.model.Document;
-import org.example.model.Office;
+import org.example.config.ConfigLoader;
+import org.example.graph.DependencyGraph;
+import org.example.model.*;
 
-import java.io.File;
-import java.net.URL;
-import java.util.List;
+import java.util.*;
 
 public class Main {
-
-    private static String resourcePath(String name) {
-        URL url = Main.class.getClassLoader().getResource(name);
-        if (url == null) {
-            throw new RuntimeException("Resource not found: " + name);
-        }
-        return new File(url.getFile()).getPath();
-    }
-
     public static void main(String[] args) {
-        String docsPath    = resourcePath("documents.json");
-        String officesPath = resourcePath("offices.json");
-        String clientsPath = resourcePath("clients.json");
+        System.out.println("=== Bureaucratic System Coordinator Starting ===\n");
 
-        List<Document> documents = ConfigLoader.getDocuments(docsPath);
-        List<Office>   offices   = ConfigLoader.getOffices(officesPath);
-        List<Client>   clients   = ConfigLoader.getClients(clientsPath);
+        try {
+            // Load configuration
+            Config config = ConfigLoader.loadConfig("config.yaml");
 
-        System.out.println("Documents: " + documents.size());
-        System.out.println("Offices: " + offices.size());
-        System.out.println("Clients: " + clients.size());
-        System.out.println();
-
-        for (Client c : clients) {
-            StringBuilder route = new StringBuilder();
-            for (int i = 0; i < c.getOfficeRoute().size(); i++) {
-                if (i > 0) route.append(" -> ");
-                route.append(c.getOfficeRoute().get(i).getName());
+            // Build dependency graph
+            DependencyGraph dependencyGraph = new DependencyGraph();
+            for (Map.Entry<String, Config.DocumentConfig> entry : config.getDocuments().entrySet()) {
+                String docName = entry.getKey();
+                List<String> requires = entry.getValue().getRequires();
+                DocumentType docType = new DocumentType(docName, requires);
+                dependencyGraph.addDocument(docType);
             }
-            System.out.println(c.getName() + " wants doc " + c.getDocument()
-                    + " | route: " + route);
+
+            dependencyGraph.printDependencies();
+
+            // Create offices and start counters
+            Map<String, Office> offices = new HashMap<>();
+            System.out.println("\n*** Creating Offices ***");
+            for (Map.Entry<String, Config.OfficeConfig> entry : config.getOffices().entrySet()) {
+                String officeName = entry.getKey();
+                Config.OfficeConfig officeConfig = entry.getValue();
+
+                Office office = new Office(officeName, officeConfig.getIssues(), officeConfig.getCounters());
+                offices.put(officeName, office);
+                System.out.println("  " + office);
+
+                office.startCounters();
+            }
+
+            System.out.println("\n*** Simulating Clients ***\n");
+
+            // Create some test clients
+            List<Thread> clientThreads = new ArrayList<>();
+
+            // Get some documents from the config to simulate clients
+            List<String> availableDocuments = new ArrayList<>(config.getDocuments().keySet());
+
+            // Create clients that want different documents
+            for (int i = 0; i < Math.min(5, availableDocuments.size()); i++) {
+                String desiredDoc = availableDocuments.get(i);
+                List<String> path = dependencyGraph.getDocumentPath(desiredDoc);
+
+                if (!path.isEmpty()) {
+                    Client client = new Client(desiredDoc, path, offices);
+                    Thread clientThread = new Thread(client);
+                    clientThreads.add(clientThread);
+                    clientThread.start();
+
+                    // Stagger client arrivals
+                    Thread.sleep(500);
+                }
+            }
+
+            // Wait for all clients to finish
+            for (Thread clientThread : clientThreads) {
+                clientThread.join();
+            }
+
+            System.out.println("\n[SUCCESS] All clients have been served!");
+            System.out.println("Shutting down offices...");
+
+            // Shutdown all counters
+            for (Office office : offices.values()) {
+                office.shutdownCounters();
+            }
+
+            Thread.sleep(1000);
+            System.out.println("=== Bureaucratic System Coordinator finished ===");
+
+        } catch (Exception e) {
+            System.err.println("[ERROR] Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
+
