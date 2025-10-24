@@ -1,0 +1,66 @@
+offices:
+  CityHall:
+    issues:
+      - BirthCertificate
+      - ResidencePermit
+    counters: 2
+
+  TaxOffice:
+    issues:
+      - TaxNumber
+      - TaxClearance
+    counters: 3
+
+  PoliceStation:
+    issues:
+      - IdentityCard
+      - CriminalRecord
+    counters: 2
+
+  PassportOffice:
+    issues:
+      - Passport
+    counters: 1
+
+  DriverLicenseOffice:
+    issues:
+      - DriverLicense
+    counters: 2
+
+documents:
+  BirthCertificate:
+    requires: []
+
+  TaxNumber:
+    requires:
+      - BirthCertificate
+
+  ResidencePermit:
+    requires:
+      - BirthCertificate
+
+  IdentityCard:
+    requires:
+      - BirthCertificate
+      - ResidencePermit
+
+  CriminalRecord:
+    requires:
+      - IdentityCard
+
+  TaxClearance:
+    requires:
+      - TaxNumber
+      - IdentityCard
+
+  Passport:
+    requires:
+      - IdentityCard
+      - CriminalRecord
+      - TaxClearance
+
+  DriverLicense:
+    requires:
+      - IdentityCard
+      - CriminalRecord
+
