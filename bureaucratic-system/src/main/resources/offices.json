@@ -1,0 +1,9 @@
+{
+  "offices": [
+    { "name": "Office 1", "counters": 3, "document": "1" },
+    { "name": "Office 2", "counters": 4, "document": "2" },
+    { "name": "Office 3", "counters": 2, "document": "3" },
+    { "name": "Office 4", "counters": 2, "document": "4" },
+    { "name": "Office 5", "counters": 1, "document": "5" }
+  ]
+}
