@@ -18,7 +18,7 @@ public class Client implements Runnable {
 
     public Client(String desiredDocument, List<String> documentPath, Map<String, Office> officeMap) {
         this.id = clientIdGenerator.getAndIncrement();
-        this.name = "Client-" + id;
+        this.name = "Client " + id;
         this.desiredDocument = desiredDocument;
         this.documentPath = documentPath;
         this.obtainedDocuments = ConcurrentHashMap.newKeySet();
@@ -45,11 +45,9 @@ public class Client implements Runnable {
         System.out.println("         Path required: " + documentPath);
 
         try {
-            // Follow the document path
             for (String docName : documentPath) {
                 currentDocumentNeeded = docName;
 
-                // Find which office issues this document
                 Office targetOffice = findOfficeForDocument(docName);
                 if (targetOffice == null) {
                     System.out.println("[ERROR] " + name + " ERROR: No office issues " + docName);
@@ -58,10 +56,8 @@ public class Client implements Runnable {
 
                 System.out.println("[GOING] " + name + " going to " + targetOffice.getName() + " for " + docName);
 
-                // Join queue at the office
                 targetOffice.assignClient(this);
 
-                // Wait until document is received
                 synchronized (this) {
                     while (!obtainedDocuments.contains(docName)) {
                         wait();
@@ -88,4 +84,3 @@ public class Client implements Runnable {
         return null;
     }
 }
-
