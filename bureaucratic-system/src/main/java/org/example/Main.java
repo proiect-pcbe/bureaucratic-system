@@ -8,13 +8,11 @@ import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("=== Bureaucratic System Coordinator Starting ===\n");
+        System.out.println("\n=== Bureaucratic System Coordinator Starting ===\n");
 
         try {
-            // Load configuration
             Config config = ConfigLoader.loadConfig("config.yaml");
 
-            // Build dependency graph
             DependencyGraph dependencyGraph = new DependencyGraph();
             for (Map.Entry<String, Config.DocumentConfig> entry : config.getDocuments().entrySet()) {
                 String docName = entry.getKey();
@@ -23,11 +21,8 @@ public class Main {
                 dependencyGraph.addDocument(docType);
             }
 
-            dependencyGraph.printDependencies();
-
-            // Create offices and start counters
             Map<String, Office> offices = new HashMap<>();
-            System.out.println("\n*** Creating Offices ***");
+            System.out.println("*** Creating Offices ***\n");
             for (Map.Entry<String, Config.OfficeConfig> entry : config.getOffices().entrySet()) {
                 String officeName = entry.getKey();
                 Config.OfficeConfig officeConfig = entry.getValue();
@@ -41,13 +36,10 @@ public class Main {
 
             System.out.println("\n*** Simulating Clients ***\n");
 
-            // Create some test clients
             List<Thread> clientThreads = new ArrayList<>();
 
-            // Get some documents from the config to simulate clients
             List<String> availableDocuments = new ArrayList<>(config.getDocuments().keySet());
 
-            // Create clients that want different documents
             for (int i = 0; i < Math.min(5, availableDocuments.size()); i++) {
                 String desiredDoc = availableDocuments.get(i);
                 List<String> path = dependencyGraph.getDocumentPath(desiredDoc);
@@ -58,26 +50,23 @@ public class Main {
                     clientThreads.add(clientThread);
                     clientThread.start();
 
-                    // Stagger client arrivals
                     Thread.sleep(500);
                 }
             }
 
-            // Wait for all clients to finish
             for (Thread clientThread : clientThreads) {
                 clientThread.join();
             }
 
             System.out.println("\n[SUCCESS] All clients have been served!");
-            System.out.println("Shutting down offices...");
+            System.out.println("Shutting down offices...\n");
 
-            // Shutdown all counters
             for (Office office : offices.values()) {
                 office.shutdownCounters();
             }
 
-            Thread.sleep(1000);
-            System.out.println("=== Bureaucratic System Coordinator finished ===");
+            Thread.sleep(5000);
+            System.out.println("\n=== Bureaucratic System Coordinator finished ===");
 
         } catch (Exception e) {
             System.err.println("[ERROR] Error: " + e.getMessage());

@@ -1,8 +1,6 @@
 package org.example.model;
 
 import java.util.Random;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Counter implements Runnable {
@@ -10,7 +8,6 @@ public class Counter implements Runnable {
 
     private final int id;
     private final Office office;
-    private final BlockingQueue<Client> queue;
     private volatile CounterStatus status;
     private final Random random;
     private volatile boolean running;
@@ -18,7 +15,6 @@ public class Counter implements Runnable {
     public Counter(Office office) {
         this.id = counterIdGenerator.getAndIncrement();
         this.office = office;
-        this.queue = new LinkedBlockingQueue<>();
         this.status = CounterStatus.OPEN;
         this.random = new Random();
         this.running = true;
@@ -32,14 +28,6 @@ public class Counter implements Runnable {
         return status;
     }
 
-    public int getQueueSize() {
-        return queue.size();
-    }
-
-    public void addClient(Client client) throws InterruptedException {
-        queue.put(client);
-    }
-
     public void shutdown() {
         running = false;
     }
@@ -50,7 +38,6 @@ public class Counter implements Runnable {
 
         while (running) {
             try {
-                // Random coffee break
                 if (status == CounterStatus.OPEN && random.nextInt(100) < 2) {
                     status = CounterStatus.COFFEE_BREAK;
                     System.out.println("[BREAK] Counter " + id + " at " + office.getName() + " taking coffee break!");
@@ -60,7 +47,8 @@ public class Counter implements Runnable {
                 }
 
                 if (status == CounterStatus.OPEN) {
-                    Client client = queue.poll();
+                    Client client = office.getNextWaitingClient();
+
                     if (client != null) {
                         processClient(client);
                     } else {
@@ -81,15 +69,12 @@ public class Counter implements Runnable {
     private void processClient(Client client) throws InterruptedException {
         String documentName = client.getCurrentDocumentNeeded();
         System.out.println("[PROCESSING] Counter " + id + " at " + office.getName() +
-                         " processing " + client.getName() + " for document: " + documentName);
+                " processing " + client.getName() + " for document: " + documentName);
 
-        // Simulate processing time
         Thread.sleep(random.nextInt(1000) + 500);
 
-        // Issue document
         client.receiveDocument(documentName);
         System.out.println("[ISSUED] Counter " + id + " at " + office.getName() +
-                         " issued " + documentName + " to " + client.getName());
+                " issued " + documentName + " to " + client.getName());
     }
 }
-

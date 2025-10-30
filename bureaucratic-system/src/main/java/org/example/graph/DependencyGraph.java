@@ -27,10 +27,6 @@ public class DependencyGraph {
         return documents.get(name);
     }
 
-    /**
-     * Returns the order in which documents must be obtained to get the target document.
-     * Uses topological sort to determine the correct order.
-     */
     public List<String> getDocumentPath(String targetDocument) {
         if (!documents.containsKey(targetDocument)) {
             return Collections.emptyList();
@@ -60,13 +56,11 @@ public class DependencyGraph {
         DocumentType doc = documents.get(documentName);
 
         if (doc != null) {
-            // First, get all required documents
             for (String requiredDoc : doc.getRequiredDocuments()) {
                 buildPath(requiredDoc, visited, path);
             }
         }
 
-        // Then add this document
         path.add(documentName);
     }
 

@@ -2,21 +2,21 @@ package org.example.model;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class Office {
     private final String name;
     private final List<String> documentTypes;
     private final List<Counter> counters;
-    private final AtomicInteger roundRobinIndex;
+    private final BlockingQueue<Client> globalWaitingQueue;
 
     public Office(String name, List<String> documentTypes, int numberOfCounters) {
         this.name = name;
         this.documentTypes = documentTypes;
         this.counters = new ArrayList<>();
-        this.roundRobinIndex = new AtomicInteger(0);
+        this.globalWaitingQueue = new LinkedBlockingQueue<>();
 
-        // Create counters
         for (int i = 0; i < numberOfCounters; i++) {
             counters.add(new Counter(this));
         }
@@ -51,24 +51,27 @@ public class Office {
     }
 
     public Counter assignClient(Client client) throws InterruptedException {
-        // Find the counter with the shortest queue that is open
-        Counter bestCounter = null;
-        int minQueueSize = Integer.MAX_VALUE;
+        globalWaitingQueue.put(client);
 
-        for (Counter counter : counters) {
-            if (counter.getStatus() == CounterStatus.OPEN && counter.getQueueSize() < minQueueSize) {
-                bestCounter = counter;
-                minQueueSize = counter.getQueueSize();
-            }
+        synchronized (this) {
+            notifyAll();
         }
 
-        // If all counters are on break, wait for any counter
-        if (bestCounter == null) {
-            bestCounter = counters.get(roundRobinIndex.getAndIncrement() % counters.size());
-        }
+        return null;
+    }
 
-        bestCounter.addClient(client);
-        return bestCounter;
+    public Client getNextWaitingClient() {
+        return globalWaitingQueue.poll();
+    }
+
+    public void waitForClients() throws InterruptedException {
+        synchronized (this) {
+            wait();
+        }
+    }
+
+    public boolean hasWaitingClients() {
+        return !globalWaitingQueue.isEmpty();
     }
 
     @Override
@@ -76,4 +79,3 @@ public class Office {
         return name + " (issues: " + documentTypes + ")";
     }
 }
-
