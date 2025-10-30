@@ -6,8 +6,6 @@ import java.util.concurrent.TimeUnit;
 
 public class Counter implements Runnable {
 
-    public enum CounterStatus { OPEN, BREAK }
-
     private final int id;
     private final Office office;
     private final Random random = new Random();
