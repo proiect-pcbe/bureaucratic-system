@@ -1,31 +1,33 @@
 package org.example.model;
 
+import java.util.Objects;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.TimeUnit;
 
 public class Counter implements Runnable {
-    private static final AtomicInteger counterIdGenerator = new AtomicInteger(1);
+
+    public enum CounterStatus { OPEN, BREAK }
 
     private final int id;
     private final Office office;
-    private volatile CounterStatus status;
-    private final Random random;
-    private volatile boolean running;
+    private final Random random = new Random();
 
-    public Counter(Office office) {
-        this.id = counterIdGenerator.getAndIncrement();
-        this.office = office;
-        this.status = CounterStatus.OPEN;
-        this.random = new Random();
-        this.running = true;
+    private volatile boolean running = true;
+    private volatile CounterStatus status = CounterStatus.OPEN;
+
+    public Counter(int id, Office office) {
+        this.id = id;
+        this.office = Objects.requireNonNull(office, "office");
     }
 
-    public int getId() {
-        return id;
-    }
+    public int getId() { return id; }
 
-    public CounterStatus getStatus() {
-        return status;
+    public Office getOffice() { return office; }
+
+    public CounterStatus getStatus() { return status; }
+
+    public void setStatus(CounterStatus status) {
+        this.status = status;
     }
 
     public void shutdown() {
@@ -35,34 +37,21 @@ public class Counter implements Runnable {
     @Override
     public void run() {
         System.out.println("Counter " + id + " at " + office.getName() + " started.");
-
         while (running) {
             try {
-                if (status == CounterStatus.OPEN && random.nextInt(100) < 2) {
-                    status = CounterStatus.COFFEE_BREAK;
-                    System.out.println("[BREAK] Counter " + id + " at " + office.getName() + " taking coffee break!");
-                    Thread.sleep(random.nextInt(2000) + 1000);
-                    status = CounterStatus.OPEN;
-                    System.out.println("[BACK] Counter " + id + " at " + office.getName() + " back from coffee break.");
-                }
-
                 if (status == CounterStatus.OPEN) {
-                    Client client = office.getNextWaitingClient();
-
+                    Client client = office.getNextWaitingClientTimed(200, TimeUnit.MILLISECONDS);
                     if (client != null) {
                         processClient(client);
-                    } else {
-                        Thread.sleep(100);
                     }
                 } else {
-                    Thread.sleep(500);
+                    Thread.sleep(200);
                 }
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 break;
             }
         }
-
         System.out.println("Counter " + id + " at " + office.getName() + " closed.");
     }
 
@@ -71,6 +60,7 @@ public class Counter implements Runnable {
         System.out.println("[PROCESSING] Counter " + id + " at " + office.getName() +
                 " processing " + client.getName() + " for document: " + documentName);
 
+        // Simulate processing
         Thread.sleep(random.nextInt(1000) + 500);
 
         client.receiveDocument(documentName);

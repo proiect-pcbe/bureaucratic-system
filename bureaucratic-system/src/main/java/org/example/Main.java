@@ -65,7 +65,6 @@ public class Main {
                 office.shutdownCounters();
             }
 
-            Thread.sleep(5000);
             System.out.println("\n=== Bureaucratic System Coordinator finished ===");
 
         } catch (Exception e) {
