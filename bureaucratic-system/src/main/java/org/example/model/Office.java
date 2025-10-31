@@ -1,6 +1,7 @@
 package org.example.model;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -10,10 +11,11 @@ public class Office {
     private final List<String> documentTypes;
     private final List<Counter> counters;
     private final BlockingQueue<Client> globalWaitingQueue;
+    private final List<Thread> counterThreads = new ArrayList<>();
 
     public Office(String name, List<String> documentTypes, int numberOfCounters) {
         this.name = name;
-        this.documentTypes = documentTypes;
+        this.documentTypes = List.copyOf(documentTypes);
         this.counters = new ArrayList<>();
         this.globalWaitingQueue = new LinkedBlockingQueue<>();
 
@@ -31,7 +33,7 @@ public class Office {
     }
 
     public List<Counter> getCounters() {
-        return counters;
+        return Collections.unmodifiableList(counters);
     }
 
     public boolean canIssue(String documentType) {
@@ -40,7 +42,9 @@ public class Office {
 
     public void startCounters() {
         for (Counter counter : counters) {
-            new Thread(counter).start();
+            Thread t = new Thread(counter, "Counter-" + name + "-" + counter.getId());
+            counterThreads.add(t);
+            t.start();
         }
     }
 
@@ -48,30 +52,24 @@ public class Office {
         for (Counter counter : counters) {
             counter.shutdown();
         }
+        for (Thread t : counterThreads) {
+            t.interrupt();
+        }
+        for (Thread t : counterThreads) {
+            try {
+                t.join(2000);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
-    public Counter assignClient(Client client) throws InterruptedException {
+    public void assignClient(Client client) throws InterruptedException {
         globalWaitingQueue.put(client);
-
-        synchronized (this) {
-            notifyAll();
-        }
-
-        return null;
     }
 
-    public Client getNextWaitingClient() {
-        return globalWaitingQueue.poll();
-    }
-
-    public void waitForClients() throws InterruptedException {
-        synchronized (this) {
-            wait();
-        }
-    }
-
-    public boolean hasWaitingClients() {
-        return !globalWaitingQueue.isEmpty();
+    Client takeNextClient() throws InterruptedException {
+        return globalWaitingQueue.take();
     }
 
     @Override

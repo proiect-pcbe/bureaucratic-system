@@ -8,24 +8,17 @@ public class Counter implements Runnable {
 
     private final int id;
     private final Office office;
-    private volatile CounterStatus status;
-    private final Random random;
-    private volatile boolean running;
+    private volatile CounterStatus status = CounterStatus.OPEN;
+    private final Random random = new Random();
+    private volatile boolean running = true;
 
     public Counter(Office office) {
         this.id = counterIdGenerator.getAndIncrement();
         this.office = office;
-        this.status = CounterStatus.OPEN;
-        this.random = new Random();
-        this.running = true;
     }
 
     public int getId() {
         return id;
-    }
-
-    public CounterStatus getStatus() {
-        return status;
     }
 
     public void shutdown() {
@@ -35,46 +28,55 @@ public class Counter implements Runnable {
     @Override
     public void run() {
         System.out.println("Counter " + id + " at " + office.getName() + " started.");
-
-        while (running) {
-            try {
+        try {
+            while (running) {
                 if (status == CounterStatus.OPEN && random.nextInt(100) < 2) {
                     status = CounterStatus.COFFEE_BREAK;
                     System.out.println("[BREAK] Counter " + id + " at " + office.getName() + " taking coffee break!");
-                    Thread.sleep(random.nextInt(2000) + 1000);
-                    status = CounterStatus.OPEN;
-                    System.out.println("[BACK] Counter " + id + " at " + office.getName() + " back from coffee break.");
-                }
-
-                if (status == CounterStatus.OPEN) {
-                    Client client = office.getNextWaitingClient();
-
-                    if (client != null) {
-                        processClient(client);
-                    } else {
-                        Thread.sleep(100);
+                    try {
+                        Thread.sleep(random.nextInt(2000) + 1000);
+                    } catch (InterruptedException ie) {
+                        if (!running) break;
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        status = CounterStatus.OPEN;
+                        System.out.println("[BACK] Counter " + id + " at " + office.getName() + " back from coffee break.");
                     }
-                } else {
-                    Thread.sleep(500);
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
-            }
-        }
 
-        System.out.println("Counter " + id + " at " + office.getName() + " closed.");
+                if (!running) break;
+
+                Client client;
+                try {
+                    client = office.takeNextClient();
+                } catch (InterruptedException ie) {
+                    if (!running) break;
+                    Thread.currentThread().interrupt();
+                    continue;
+                }
+
+                if (client != null && running && status == CounterStatus.OPEN) {
+                    processClient(client);
+                }
+            }
+        } finally {
+            System.out.println("Counter " + id + " at " + office.getName() + " closed.");
+        }
     }
 
-    private void processClient(Client client) throws InterruptedException {
-        String documentName = client.getCurrentDocumentNeeded();
-        System.out.println("[PROCESSING] Counter " + id + " at " + office.getName() +
-                " processing " + client.getName() + " for document: " + documentName);
+    private void processClient(Client client) {
+        try {
+            String documentName = client.getCurrentDocumentNeeded();
+            System.out.println("[PROCESSING] Counter " + id + " at " + office.getName() +
+                    " processing " + client.getName() + " for document: " + documentName);
 
-        Thread.sleep(random.nextInt(1000) + 500);
+            Thread.sleep(random.nextInt(1000) + 500);
 
-        client.receiveDocument(documentName);
-        System.out.println("[ISSUED] Counter " + id + " at " + office.getName() +
-                " issued " + documentName + " to " + client.getName());
+            client.receiveDocument(documentName);
+            System.out.println("[ISSUED] Counter " + id + " at " + office.getName() +
+                    " issued " + documentName + " to " + client.getName());
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
     }
 }
