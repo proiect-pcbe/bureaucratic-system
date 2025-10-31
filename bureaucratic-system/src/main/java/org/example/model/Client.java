@@ -14,7 +14,6 @@ public class Client implements Runnable {
     private final Set<String> obtainedDocuments;
     private final Map<String, Office> officeMap;
     private volatile String currentDocumentNeeded;
-    private int currentStep;
 
     public Client(String desiredDocument, List<String> documentPath, Map<String, Office> officeMap) {
         this.id = clientIdGenerator.getAndIncrement();
@@ -23,7 +22,6 @@ public class Client implements Runnable {
         this.documentPath = documentPath;
         this.obtainedDocuments = ConcurrentHashMap.newKeySet();
         this.officeMap = officeMap;
-        this.currentStep = 0;
     }
 
     public String getName() {
@@ -63,8 +61,6 @@ public class Client implements Runnable {
                         wait();
                     }
                 }
-
-                currentStep++;
             }
 
             System.out.println("[COMPLETE] " + name + " successfully obtained " + desiredDocument + "!");
