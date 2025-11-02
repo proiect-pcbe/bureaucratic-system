@@ -30,7 +30,7 @@ public class Counter implements Runnable {
         System.out.println("Counter " + id + " at " + office.getName() + " started.");
         try {
             while (running) {
-                if (status == CounterStatus.OPEN && random.nextInt(100) < 2) {
+                if (status == CounterStatus.OPEN && random.nextInt(100) < 25) {
                     status = CounterStatus.COFFEE_BREAK;
                     System.out.println("[BREAK] Counter " + id + " at " + office.getName() + " taking coffee break!");
                     try {

@@ -40,7 +40,7 @@ public class Main {
 
             List<String> availableDocuments = new ArrayList<>(config.getDocuments().keySet());
 
-            for (int i = 0; i < Math.min(5, availableDocuments.size()); i++) {
+            for (int i = 0; i < availableDocuments.size(); i++) {
                 String desiredDoc = availableDocuments.get(i);
                 List<String> path = dependencyGraph.getDocumentPath(desiredDoc);
 
