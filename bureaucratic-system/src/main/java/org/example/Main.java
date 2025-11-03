@@ -39,19 +39,31 @@ public class Main {
             List<Thread> clientThreads = new ArrayList<>();
 
             List<String> availableDocuments = new ArrayList<>(config.getDocuments().keySet());
-
-            for (int i = 0; i < availableDocuments.size(); i++) {
-                String desiredDoc = availableDocuments.get(i);
-                List<String> path = dependencyGraph.getDocumentPath(desiredDoc);
-
+            List<String> validDocs = new ArrayList<>();
+            Map<String, List<String>> docPaths = new HashMap<>();
+            for (String doc : availableDocuments) {
+                List<String> path = dependencyGraph.getDocumentPath(doc);
                 if (!path.isEmpty()) {
-                    Client client = new Client(desiredDoc, path, offices);
-                    Thread clientThread = new Thread(client);
-                    clientThreads.add(clientThread);
-                    clientThread.start();
-
-                    Thread.sleep(500);
+                    validDocs.add(doc);
+                    docPaths.put(doc, path);
                 }
+            }
+            if (validDocs.isEmpty()) {
+                throw new IllegalStateException("No documents have a valid dependency path. Check your config/graph.");
+            }
+
+            Random rand = new Random();
+            int CLIENT_COUNT = 50;
+            for (int i = 0; i < CLIENT_COUNT; i++) {
+                String desiredDoc = validDocs.get(rand.nextInt(validDocs.size()));
+                List<String> path = new ArrayList<>(docPaths.get(desiredDoc));
+
+                Client client = new Client(desiredDoc, path, offices);
+                Thread clientThread = new Thread(client, "Client " + (i + 1) + " -" + desiredDoc);
+                clientThreads.add(clientThread);
+                clientThread.start();
+
+                Thread.sleep(100);
             }
 
             for (Thread clientThread : clientThreads) {
